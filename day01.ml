@@ -23,6 +23,36 @@ let part1 (left, right) =
   let gather acc left right = acc + Int.abs (left - right) in
   List.fold_left2 gather 0 left right
 
+let part2 (left, right) =
+  let rec gather_left current count acc all_left all_right =
+    match all_left with
+    | left::ls ->
+        if left = current then
+          gather_left current (count + current) acc ls all_right
+        else
+          gather_right current count acc all_left all_right
+    | [] ->
+        gather_right current count acc [] all_right
+  and gather_right current count acc all_left all_right =
+    match all_right with
+    | [] -> acc
+    | right::rs ->
+        if right < current then
+          gather_right current count acc all_left rs
+        else if right = current then
+          gather_right current count (acc + count) all_left rs
+        else
+          match all_left with
+          | left::ls ->
+              gather_left left left acc ls all_right
+          | [] -> acc in
+  gather_right 0 0 0 left right
+
 let () =
   Printf.printf "Day 1; Puzzle 1; test = %d\n\
-                 Day 1; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 1; Puzzle 1 = %d\n\
+                 Day 1; Puzzle 2; test = %d\n\
+                 Day 1; Puzzle 2; test (swap) = %d\n\
+                 Day 1; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                         (part2 test) (part2 (Pair.swap test))
+                                         (part2 input)
