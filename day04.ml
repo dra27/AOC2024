@@ -59,6 +59,26 @@ let part1 input =
     String.foldi_left gather_col count row in
   Array.foldi_left gather_row 0 input
 
+let part2 input =
+  let y_max = Array.length input - 3 in
+  let x_max = String.length input.(0) - 3 in
+  let gather_row count y row =
+    let gather_col count x _ =
+      if x > x_max || y > y_max then
+        count
+      else
+        let test f = let s = String.init 3 f in s = "MAS" || s = "SAM" in
+        if test (fun i -> input.(y + i).[x + i]) &&
+           test (fun i -> input.(y + i).[x + 2 - i]) then
+          succ count
+        else
+          count in
+    String.foldi_left gather_col count row in
+  Array.foldi_left gather_row 0 input
+
 let () =
   Printf.printf "Day 4; Puzzle 1; test = %d\n\
-                 Day 4; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 4; Puzzle 1 = %d\n\
+                 Day 4; Puzzle 2; test = %d\n\
+                 Day 4; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                         (part2 test) (part2 input)
