@@ -54,7 +54,7 @@ let process_updates gather initial (rules, updates) =
     gather rules acc @@ List.map int_of_string (String.split_on_char ',' l) in
   List.fold_left process initial updates
 
-let part1 rules count update =
+let part1 rules (count, incorrect) update =
   let middle = List.length update / 2 in
   let is_valid (not_allowed_now, middle_element) elt =
     if IntSet.mem elt not_allowed_now then
@@ -73,11 +73,42 @@ let part1 rules count update =
           middle_element in
       (not_allowed_now, middle_element) in
   try
-    count + snd (List.fold_left is_valid (IntSet.empty, -middle) update)
-  with Exit -> count
+    let count =
+      count + snd (List.fold_left is_valid (IntSet.empty, -middle) update) in
+    count, incorrect
+  with Exit -> count, update::incorrect
 
-let part1 = process_updates part1 0
+let part1 ((rules, _) as input) =
+  let (count, incorrect) = process_updates part1 (0, []) input in
+  count, (rules, incorrect)
+
+let (test_part1, test_incorrect) = part1 test
+let (solution_part1, input_incorrect) = part1 input
+
+let part2 rules count update =
+  let[@tail_mod_cons] rec correct = function
+  | [] -> []
+  | elt::rest ->
+      let[@tail_mod_cons] process set =
+        let hoist, rest = List.partition (Fun.flip IntSet.mem set) rest in
+        if hoist = [] then
+          elt :: correct rest
+        else
+          correct (hoist @ elt::rest) in
+      match IntMap.find_opt elt rules with
+      | Some set -> process set
+      | None -> elt :: correct rest in
+  let corrected = correct update in
+  count + List.nth corrected (List.length corrected / 2)
+
+let part2 (rules, updates) = List.fold_left (part2 rules) 0 updates
+
+let test_part2 = part2 test_incorrect
+let solution_part2 = part2 input_incorrect
 
 let () =
   Printf.printf "Day 5; Puzzle 1; test = %d\n\
-                 Day 5; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 5; Puzzle 1 = %d\n\
+                 Day 5; Puzzle 2; test = %d\n\
+                 Day 5; Puzzle 2 = %d\n" test_part1 solution_part1
+                                         test_part2 solution_part2
