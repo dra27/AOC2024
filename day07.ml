@@ -23,24 +23,38 @@ let input =
   In_channel.with_open_text "input-07" @@ fun ic ->
     parse In_channel.fold_lines ic
 
-let possible (total, calibrations) =
-  let rec loop current = function
-  | [] -> current = total
-  | x::xs ->
-      (current * x <= total && loop (current * x) xs) ||
-      (current + x <= total && loop (current + x) xs) in
+let possible op (total, calibrations) =
+  let rec loop current calibrations =
+    let test op x xs =
+      let next = op current x in
+      next <= total && loop next xs in
+    match calibrations with
+    | [] -> current = total
+    | x::xs ->
+        test ( * ) x xs || test (+) x xs || test op x xs in
   match calibrations with
   | x::xs -> loop x xs
   | [] -> assert false
 
-let part1 input =
+let gather op input =
   let gather acc ((total, _) as calibration) =
-    if possible calibration then
+    if possible op calibration then
       acc + total
     else
       acc in
   List.fold_left gather 0 input
 
+let concat a b =
+  let mul =
+    int_of_float (Float.pow 10. (floor (log10 (float_of_int b)) +. 1.)) in
+  a * mul + b
+
+let part1 = gather (fun _ _ -> max_int)
+let part2 = gather concat
+
 let () =
   Printf.printf "Day 7; Puzzle 1; test = %d\n\
-                 Day 7; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 7; Puzzle 1 = %d\n\
+                 Day 7; Puzzle 2; test = %d\n\
+                 Day 7; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                         (part2 test) (part2 input)
