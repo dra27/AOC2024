@@ -45,19 +45,15 @@ let input = In_channel.with_open_text "input-08" @@ gather In_channel.fold_lines
 
 module PairSet = Set.Make(struct type t = int * int let compare = compare end)
 
-let part1 (freqs, max) =
-  let add x y antennae =
-    if x < 0 || y < 0 || x >= max || y >= max then
-      antennae
-    else
-      PairSet.add (x, y) antennae in
+let infiltrate add (freqs, max) =
+  let add = add max in
   let rec augment antinodes x y = function
   | (x', y')::antennae ->
       let antinodes =
         assert (y > y');
         let dy = y' - y in
         let dx = x' - x in
-        add (x - dx) (y - dy) (add (x' + dx) (y' + dy) antinodes) in
+        add x (-dx) y (-dy) (add x' dx y' dy antinodes) in
       augment (augment antinodes x' y' antennae) x y antennae
   | [] ->
       antinodes in
@@ -69,6 +65,26 @@ let part1 (freqs, max) =
         assert false in
   PairSet.cardinal @@ CharMap.fold fold freqs PairSet.empty
 
+let part1 max x dx y dy antennae =
+  let x = x + dx in
+  let y = y + dy in
+  if x < 0 || y < 0 || x >= max || y >= max then
+    antennae
+  else
+    PairSet.add (x, y) antennae
+
+let rec part2 max x dx y dy antennae =
+  if x < 0 || y < 0 || x >= max || y >= max then
+    antennae
+  else
+    part2 max (x + dx) dx (y + dy) dy (PairSet.add (x, y) antennae)
+
+let part1 = infiltrate part1
+let part2 = infiltrate part2
+
 let () =
   Printf.printf "Day 8; Puzzle 1; test = %d\n\
-                 Day 8; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 8; Puzzle 1 = %d\n\
+                 Day 8; Puzzle 2; test = %d\n\
+                 Day 8; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                         (part2 test) (part2 input)
