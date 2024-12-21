@@ -43,11 +43,11 @@ let parse input =
 
 module PairSet = Set.Make(struct type t = int * int let compare = compare end)
 
-let part1 input =
+let part init accumulate return input =
   let rec walk v x y nines =
     if input.(y).(x) = v then
       if v = 9 then
-        PairSet.add (x, y) nines
+        accumulate (x, y) nines
       else
         let v = succ v in
         nines
@@ -60,11 +60,14 @@ let part1 input =
   let gather score y row =
     let gather score x v =
       if v = 0 then
-        score + PairSet.cardinal (walk 0 x y PairSet.empty)
+        score + return (walk 0 x y init)
       else
         score in
     Array.foldi_left gather score row in
   Array.foldi_left gather 0 input
+
+let part1 = part PairSet.empty PairSet.add PairSet.cardinal
+let part2 = part 0 (Fun.const succ) Fun.id
 
 let test =
   parse @@ String.split_on_char '\n' (String.trim {|
@@ -84,4 +87,7 @@ let input =
 
 let () =
   Printf.printf "Day 10; Puzzle 1; test = %d\n\
-                 Day 10; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 10; Puzzle 1 = %d\n\
+                 Day 10; Puzzle 2; test = %d\n\
+                 Day 10; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                          (part2 test) (part2 input)
