@@ -52,7 +52,7 @@ let parse input =
           assert false in
   snd @@ Array.init_fold (len + 2) f input
 
-let part1 input =
+let part analyse input =
   let last = Array.length input - 1 in
   let seen =
     let f y =
@@ -60,19 +60,19 @@ let part1 input =
       Array.init (Array.length input) (fun x -> mark || x = 0 || x = last) in
     Array.init (Array.length input) f in
   let rec measure c x y ((perimeter, area) as acc) =
-    if input.(y).[x] = c then
-      if seen.(y).(x) then
-        acc
-      else begin
-        seen.(y).(x) <- true;
-        (perimeter, succ area)
-        |> measure c x (pred y)
-        |> measure c x (succ y)
-        |> measure c (pred x) y
-        |> measure c (succ x) y
-      end
-    else
-      (succ perimeter, area) in
+    if input.(y).[x] <> c || seen.(y).(x) then
+      acc
+    else begin
+      seen.(y).(x) <- true;
+      let new_perimeter =
+        Bool.to_int (analyse x y 0 (-1)) + Bool.to_int (analyse x y 0 1) +
+        Bool.to_int (analyse x y (-1) 0) + Bool.to_int (analyse x y 1 0) in
+      (perimeter + new_perimeter, succ area)
+      |> measure c x (pred y)
+      |> measure c x (succ y)
+      |> measure c (pred x) y
+      |> measure c (succ x) y
+    end in
   let gather cost y row =
     let gather cost x c =
       if seen.(y).(x) then
@@ -82,6 +82,19 @@ let part1 input =
         cost + perimeter * area in
     String.foldi_left gather cost row in
   Array.foldi_left gather 0 input
+
+let part1 input =
+  let analyse x y dx dy = input.(y).[x] <> input.(y + dy).[x + dx] in
+  part analyse input
+
+let part2 input =
+  let analyse x y dx dy =
+    let c = input.(y).[x] in
+    input.(y + dy).[x + dx] <> c &&
+      (input.(y - abs dx).[x - abs dy] <> c
+       || input.(y - abs dx).[x - abs dy] =
+            input.(y + dy - abs dx).[x + dx - abs dy]) in
+  part analyse input
 
 let test =
   parse @@ String.split_on_char '\n' (String.trim {|
@@ -103,4 +116,7 @@ let input =
 
 let () =
   Printf.printf "Day 12; Puzzle 1; test = %d\n\
-                 Day 12; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 12; Puzzle 1 = %d\n\
+                 Day 12; Puzzle 2; test = %d\n\
+                 Day 12; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                          (part2 test) (part2 input)
