@@ -15,19 +15,26 @@ let parse folder input =
   assert (phase = `Base);
   machines
 
-let part1 acc ((ax, bx, rx), (ay, by, ry)) =
+let part offset acc ((ax, bx, rx), (ay, by, ry)) =
+  let rx = offset + rx in
+  let ry = offset + ry in
   let prod = ax * ay in
   let b_numer = rx * (prod / ax) - ry * (prod / ay) in
   let b_denom = bx * (prod / ax) - by * (prod / ay) in
   if b_numer mod b_denom = 0 then
     let b = b_numer / b_denom in
-    let a = (rx - bx * b) / ax in
-    assert (a * ax + b * bx = rx && a * ay + b * by = ry);
-    3 * a + b + acc
+    let a_numer = (rx - bx * b) in
+    if a_numer mod ax = 0 then
+      let a = (rx - bx * b) / ax in
+      assert (a * ax + b * bx = rx && a * ay + b * by = ry);
+      3 * a + b + acc
+    else
+      acc
   else
     acc
 
-let part1 = List.fold_left part1 0
+let part1 = List.fold_left (part 0) 0
+let part2 = List.fold_left (part 10000000000000) 0
 
 let test =
   parse List.fold_left @@ String.split_on_char '\n' (String.trim {|
@@ -53,4 +60,7 @@ let input =
 
 let () =
   Printf.printf "Day 13; Puzzle 1; test = %d\n\
-                 Day 13; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 13; Puzzle 1 = %d\n\
+                 Day 13; Puzzle 2; test = %d\n\
+                 Day 13; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                          (part2 test) (part2 input)
