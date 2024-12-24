@@ -46,6 +46,29 @@ let part1 (width, height, robots) =
     List.fold_left (move_and_count 100) (0, 0, 0, 0) robots in
   q1 * q2 * q3 * q4
 
+let rec search ((width, height, robots) as input) n =
+  let move ((x, y), (vx, vy)) =
+    let wrap v m = let v = v mod m in if v < 0 then v + m else v in
+    let x, y = wrap (x + n * vx) width, wrap (y + n * vy) height in
+    y, x in
+  let robots = List.sort compare @@ List.map move robots in
+  let analyse (max, x', y', current) (y, x) =
+    if y = y' && x = x' then
+      (max, succ x, y, succ current)
+    else if current > max then
+      (current, succ x, y, 1)
+    else
+      (max, succ x, y, 1) in
+  let biggest, _, _, current = List.fold_left analyse (0, 0, 0, 0) robots in
+  if Int.max biggest current > 10 then
+    n
+  else
+    search input (succ n)
+
+let part2 input = search input 1
+
 let () =
   Printf.printf "Day 14; Puzzle 1; test = %d\n\
-                 Day 14; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 14; Puzzle 1 = %d\n\
+                 Day 14; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                          (part2 input)
