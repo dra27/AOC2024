@@ -1,14 +1,14 @@
 module Array = struct
   include Array
 
-  let init_fold l f acc =
+  let init_right_fold l f acc =
     if l = 0 then acc, [||] else
     if l < 0 then invalid_arg "Array.init_fold"
     else
-     let acc, res = f acc 0 in
+     let acc, res = f acc (pred l) in
      let acc = ref acc in
      let res = make l res in
-     for i = 1 to pred l do
+     for i = (l - 2) downto 0 do
        let acc', elt = f !acc i in
        acc := acc';
        unsafe_set res i elt
@@ -32,70 +32,105 @@ let direction_of_char = function
 | '<' -> W
 | _ -> invalid_arg "direction_of_char"
 
-type cell = F | O | B
+type cell = F | O of bool | B
 
-let cell_of_char = function
-| '.' -> F(*loor*)
-| 'O' -> O(*bstacle*)
-| '#' -> B(*oundary*)
-| _ -> invalid_arg "cell_of_char"
-
-let parse input =
-  match input with
+let parse =
+  let rec loop warehouse = function
   | [] -> assert false
-  | line :: _ ->
-      let size = String.length line in
-      let gather (robot, input) y =
-        match input with
-        | [] -> assert false
-        | line :: lines ->
-            let gather acc x =
-              let c = line.[x] in
-              if c = '@' then
+  | "" :: lines ->
+      let gather line acc =
+        let gather c acc = direction_of_char c :: acc in
+        String.fold_right gather line acc in
+      warehouse, List.fold_right gather lines []
+  | line :: lines ->
+      loop (line::warehouse) lines in
+  loop []
+
+let create_warehouse double warehouse =
+  let double = Bool.to_int double in
+  let size = String.length (List.hd warehouse) in
+  let gather (robot, warehouse) y =
+    match warehouse with
+    | [] -> assert false
+    | line :: lines ->
+        let gather acc x =
+          let c = line.[x lsr double] in
+          match c with
+          | '@' ->
+              if double = 0 || x land 1 = 0 then
                 (x, y), F
               else
-                acc, cell_of_char c in
-            let robot, row = Array.init_fold size gather robot in
-            (robot, lines), row in
-      match Array.init_fold size gather ((-1, -1), input) with
-      | (robot, "" :: lines), warehouse ->
-          let gather line acc =
-            let gather c acc = direction_of_char c :: acc in
-            String.fold_right gather line acc in
-          robot, warehouse, List.fold_right gather lines []
-      | _, _ -> assert false
+                (acc, F)
+          | '#' ->
+              acc, B
+          | '.' ->
+              acc, F
+          | 'O' ->
+              acc, O (double = 0 || x land 1 = 0)
+          | _ ->
+              assert false in
+        let robot, row = Array.init_right_fold (size lsl double) gather robot in
+        (robot, lines), row in
+  let (robot, lines), warehouse =
+    Array.init_right_fold size gather ((-1, -1), warehouse) in
+  assert (lines = []);
+  (robot, warehouse)
 
-let part1 (robot, warehouse, route) =
+let part double (warehouse, route) =
+  let robot, warehouse = create_warehouse double warehouse in
   let execute ((x, y) as current) command =
-    let dx, dy =
+    let dx, dy, double =
       match command with
-      | N -> Fun.id, pred
-      | E -> succ, Fun.id
-      | S -> Fun.id, succ
-      | W -> pred, Fun.id in
+      | N -> Fun.id, pred, double
+      | E -> succ, Fun.id, false
+      | S -> Fun.id, succ, double
+      | W -> pred, Fun.id, false in
     let (x', y') as next = dx x, dy y in
     match warehouse.(y').(x') with
     | F -> next
-    | O ->
-        let rec shift x y =
+    | O i ->
+        let write x y v = warehouse.(y).(x) <- v; true in
+        let scan _ _ _ = true in
+        let rec shift write v x y =
           match warehouse.(y).(x) with
           | F ->
-              warehouse.(y).(x) <- O;
-              warehouse.(y').(x') <- F;
-              next
-          | O ->
-              shift (dx x) (dy y)
+              write x y v
+          | (O is_left) as v' ->
+              if double then
+                if shift write warehouse.(y).(x) x (dy y) then
+                  let _ = write x y v in
+                  if is_left then
+                    if shift write warehouse.(y).(x + 1) (x + 1) (dy y) then
+                      write (x + 1) y F
+                    else
+                      false
+                  else if shift write warehouse.(y).(x - 1) (x - 1) (dy y) then
+                    write (x - 1) y F
+                  else
+                    false
+                else
+                  false
+              else if shift write v' (dx x) (dy y) then
+                write x y v
+              else
+                false
           | B ->
-              current in
-        shift x' y'
+              false in
+        if shift scan F x' y' && shift write F x' y' then
+          next
+        else
+         current
     | B -> current in
   let gather acc y row =
     let gather acc x = function
-    | F | B -> acc
-    | O -> 100 * y + x + acc in
+    | F | B | O false -> acc
+    | O true -> 100 * y + x + acc in
     Array.foldi_left gather acc row in
   let _ = List.fold_left execute robot route in
   Array.foldi_left gather 0 warehouse
+
+let part1 = part false
+let part2 = part true
 
 let test =
   parse @@ String.split_on_char '\n' (String.trim {|
@@ -128,4 +163,7 @@ let input =
 
 let () =
   Printf.printf "Day 15; Puzzle 1; test = %d\n\
-                 Day 15; Puzzle 1 = %d\n" (part1 test) (part1 input)
+                 Day 15; Puzzle 1 = %d\n\
+                 Day 15; Puzzle 2; test = %d\n\
+                 Day 15; Puzzle 2 = %d\n" (part1 test) (part1 input)
+                                          (part2 test) (part2 input)
